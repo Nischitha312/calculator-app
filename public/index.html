@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Node.js Calculator App</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f11;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+    header p {
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 4px;
+    }
+    .badge {
+      display: inline-block;
+      background: #1a1a2e;
+      border: 1px solid #2a2a50;
+      color: #7c7cff;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .layout {
+      display: flex;
+      gap: 1.5rem;
+      width: 100%;
+      max-width: 700px;
+      align-items: flex-start;
+    }
+
+    .card {
+      background: #1a1a1f;
+      border: 1px solid #2a2a35;
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .calc-card { flex: 1; }
+
+    /* Display */
+    .display {
+      background: #0f0f11;
+      border: 1px solid #2a2a35;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: right;
+      margin-bottom: 1.25rem;
+      min-height: 70px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    .display .expr { font-size: 13px; color: #7c7cff; font-weight: 600; min-height: 16px; }
+    .display .result {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      word-break: break-all;
+    }
+
+    /* Inputs */
+    .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    input[type="number"] {
+      background: #0f0f11;
+      border: 1px solid #2a2a35;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1.1rem;
+      padding: 10px 12px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="number"]:focus { border-color: #5555ff; }
+    input[type="number"]::placeholder { color: #444; }
+
+    /* Operation Buttons */
+    .ops-label { font-size: 11px; color: #aaa; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .ops-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .op-btn {
+      background: #1e1e28;
+      border: 1px solid #2a2a40;
+      border-radius: 8px;
+      color: #aaa;
+      font-size: 0.82rem;
+      padding: 9px 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .op-btn .sym { font-size: 1.2rem; color: #7c7cff; }
+    .op-btn:hover { background: #25253a; border-color: #5555ff; color: #fff; }
+    .op-btn.active { background: #2a2a5a; border-color: #7c7cff; color: #fff; }
+
+    /* Calculate Button */
+    .calc-btn {
+      width: 100%;
+      background: #5555ff;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      padding: 13px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      letter-spacing: 0.5px;
+    }
+    .calc-btn:hover { background: #6666ff; }
+    .calc-btn:active { transform: scale(0.98); }
+
+    .error-msg { color: #ff6b6b; font-size: 0.82rem; margin-top: 8px; min-height: 18px; text-align: center; }
+
+    /* History Panel */
+    .history-card { width: 220px; flex-shrink: 0; }
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .history-header h3 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .clear-btn {
+      background: none;
+      border: 1px solid #2a2a35;
+      border-radius: 6px;
+      color: #555;
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .clear-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+    .history-list { display: flex; flex-direction: column; gap: 6px; min-height: 40px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: #2a2a50; border-radius: 4px; }
+    .hist-item {
+      background: #0f0f11;
+      border: 1px solid #2a2a35;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.78rem;
+    }
+    .hist-item .hist-expr { color: #666; font-size: 0.72rem; }
+    .hist-item .hist-result { color: #7c7cff; font-weight: 600; font-size: 0.9rem; margin-top: 2px; }
+    .hist-item .hist-time { color: #444; font-size: 0.68rem; margin-top: 2px; }
+    .hist-empty { color: #444; font-size: 0.8rem; text-align: center; padding: 1rem 0; }
+
+    /* Server info */
+    .server-info {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      color: #444;
+      text-align: center;
+    }
+    .server-info code {
+      background: #1a1a1f;
+      border: 1px solid #2a2a35;
+      border-radius: 4px;
+      padding: 2px 6px;
+      color: #7c7cff;
+      font-size: 0.78rem;
+    }
+
+    @media (max-width: 580px) {
+      .layout { flex-direction: column; }
+      .history-card { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Node.js + Express</div>
+  <h1>Calculator App</h1>
+  <p>Powered by Nischitha</p>
+</header>
+
+<div class="layout">
+  <!-- Calculator Card -->
+  <div class="card calc-card">
+    <div class="display">
+      <div class="expr" id="exprDisplay"></div>
+      <div class="result" id="resultDisplay">0</div>
+    </div>
+
+    <div class="inputs">
+      <input type="number" id="num1" placeholder="First number" />
+      <input type="number" id="num2" placeholder="Second number" />
+    </div>
+
+    <p class="ops-label">Operation</p>
+    <div class="ops-grid">
+      <button class="op-btn active" data-op="add" onclick="selectOp(this)">
+        <span class="sym">+</span><span>Add</span>
+      </button>
+      <button class="op-btn" data-op="subtract" onclick="selectOp(this)">
+        <span class="sym">−</span><span>Subtract</span>
+      </button>
+      <button class="op-btn" data-op="multiply" onclick="selectOp(this)">
+        <span class="sym">×</span><span>Multiply</span>
+      </button>
+      <button class="op-btn" data-op="divide" onclick="selectOp(this)">
+        <span class="sym">÷</span><span>Divide</span>
+      </button>
+      <button class="op-btn" data-op="power" onclick="selectOp(this)">
+        <span class="sym">xⁿ</span><span>Power</span>
+      </button>
+      <button class="op-btn" data-op="percent" onclick="selectOp(this)">
+        <span class="sym">%</span><span>Percent</span>
+      </button>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">Calculate</button>
+    <p class="error-msg" id="errorMsg"></p>
+  </div>
+
+  <!-- History Panel -->
+  <div class="card history-card">
+    <div class="history-header">
+      <h3>History</h3>
+      <button class="clear-btn" onclick="clearHistory()">Clear</button>
+    </div>
+    <div class="history-list" id="historyList">
+      <p class="hist-empty">No calculations yet</p>
+    </div>
+  </div>
+</div>
+
+<div class="server-info">
+  API endpoint: <code>POST /calc</code> · History: <code>GET /history</code>
+</div>
+
+<script>
+  let selectedOp = 'add';
+
+  function selectOp(btn) {
+    document.querySelectorAll('.op-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedOp = btn.dataset.op;
+  }
+
+  async function calculate() {
+    const num1 = document.getElementById('num1').value;
+    const num2 = document.getElementById('num2').value;
+    const errorEl = document.getElementById('errorMsg');
+    const resultEl = document.getElementById('resultDisplay');
+    const exprEl = document.getElementById('exprDisplay');
+
+    errorEl.textContent = '';
+
+    if (num1 === '' || num2 === '') {
+      errorEl.textContent = 'Please enter both numbers.';
+      return;
+    }
+
+    try {
+      const res = await fetch('/calc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ num1, num2, operation: selectedOp })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        errorEl.textContent = data.error;
+        return;
+      }
+
+      exprEl.textContent = (data.num1 !== undefined && data.symbol && data.num2 !== undefined)
+        ? `${data.num1} ${data.symbol} ${data.num2} =`
+        : '';
+      resultEl.textContent = data.result;
+      renderHistory(data.history);
+    } catch (err) {
+      errorEl.textContent = 'Server error. Is the Node.js server running?';
+    }
+  }
+
+  async function clearHistory() {
+    await fetch('/history', { method: 'DELETE' });
+    renderHistory([]);
+  }
+
+  function renderHistory(list) {
+    const el = document.getElementById('historyList');
+    if (!list || list.length === 0) {
+      el.innerHTML = '<p class="hist-empty">No calculations yet</p>';
+      return;
+    }
+    el.innerHTML = [...list].reverse().map(h => `
+      <div class="hist-item">
+        <div class="hist-expr">${h.expression.split('=')[0].trim()}</div>
+        <div class="hist-result">= ${h.expression.split('=')[1]?.trim()}</div>
+        <div class="hist-time">${h.timestamp}</div>
+      </div>
+    `).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  // Load existing history on page load
+  fetch('/history').then(r => r.json()).then(renderHistory).catch(() => {});
+
+  // Allow Enter key to calculate
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') calculate();
+  });
+</script>
+</body>
+</html>
